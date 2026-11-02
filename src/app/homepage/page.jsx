@@ -386,6 +386,14 @@ function ChoiceRow({ options, value, onSelect, disabled, minWidth = 100 }) {
   );
 }
 
+const Req = () => <span style={{ color: "#f87171", marginLeft: 4 }}>*</span>;
+
+const FieldError = () => (
+  <p style={{ marginTop: "0.4rem", fontFamily: "'DM Sans', sans-serif", fontSize: "0.72rem", color: "#f87171" }}>
+    This field is required
+  </p>
+);
+
 function RegistrationModal({ eventId, eventTitle, eventPrice, onClose }) {
   const [form, setForm] = useState({
     full_name: "",
@@ -411,6 +419,7 @@ function RegistrationModal({ eventId, eventTitle, eventPrice, onClose }) {
   const [termsOpen, setTermsOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(true);
   const [copied, setCopied] = useState("");
+  const [showErrors, setShowErrors] = useState(false);
 
     const unitPrice = priceFor(eventPrice, form.medal);
   const totalAmount = unitPrice > 0 ? unitPrice * (Number(form.tickets_bought) || 1) : null;
@@ -473,30 +482,31 @@ function RegistrationModal({ eventId, eventTitle, eventPrice, onClose }) {
   // Every field below is mandatory, including race, estimated time, medal, t-shirt size,
   // emergency contact, pre-existing conditions, recovery-games answer, at least one
   // "how did you hear" option, and the terms checkbox.
-  const isValid =
-    form.full_name.trim() &&
-    form.email.trim() &&
-    form.phone_number.trim() &&
-    form.tickets_bought &&
-    form.gender &&
-    form.emergency_contact_name.trim() &&
-    form.emergency_contact_number.trim() &&
-    form.pre_existing_conditions.trim() &&
-    form.race_distance &&
-    hasEstimatedTime &&
-    form.medal &&
-    form.t_shirt_size &&
-    form.recovery_games &&
-    form.how_heard &&
-    form.agree_terms;
+  const missingFields = [
+  !form.full_name.trim() && "Full Name",
+  !form.email.trim() && "Email",
+  !form.phone_number.trim() && "Phone Number",
+  !form.tickets_bought && "Tickets",
+  !form.gender && "Gender",
+  !form.emergency_contact_name.trim() && "Emergency Contact Name",
+  !form.emergency_contact_number.trim() && "Emergency Contact Number",
+  !form.pre_existing_conditions.trim() && "Pre-existing Medical Conditions",
+  !form.race_distance && "Your Race",
+  !hasEstimatedTime && "Estimated Finish Time",
+  !form.medal && "Medal",
+  !form.t_shirt_size && "T-Shirt Size",
+  !form.recovery_games && "Recovery Games",
+  !form.how_heard && "How Did You Learn About Us?",
+  !form.agree_terms && "Terms agreement",
+].filter(Boolean);
+const isValid = missingFields.length === 0;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isValid) {
-      setStatus("error");
-      setErrorMsg("Please complete every field, including your emergency contact, race details and the terms agreement, before submitting.");
-      return;
-    }
+  setShowErrors(true);
+  return;
+}
     setStatus("submitting");
     setErrorMsg("");
     try {
@@ -555,6 +565,7 @@ function RegistrationModal({ eventId, eventTitle, eventPrice, onClose }) {
         style={inputBase}
         {...focusProps}
       />
+      {showErrors && !String(form[f.name]).trim() && <FieldError />}
     </div>
   );
 
@@ -590,6 +601,9 @@ function RegistrationModal({ eventId, eventTitle, eventPrice, onClose }) {
           </div>
         ) : (
           <form onSubmit={handleSubmit} style={{ padding: "1.75rem", overflowY: "auto" }}>
+            <p style={{ ...hintStyle, marginTop: 0, marginBottom: "1.25rem" }}>
+  All fields marked <span style={{ color: "#f87171" }}>*</span> are required.
+</p>
 
             {/* Existing basics */}
             {[
@@ -600,10 +614,11 @@ function RegistrationModal({ eventId, eventTitle, eventPrice, onClose }) {
             ].map(renderInput)}
 
             {/* NEW: Gender */}
-            <div style={{ marginBottom: "1.1rem" }}>
-              <label style={labelStyle}>Gender</label>
-              <ChoiceRow options={GENDER_OPTIONS} value={form.gender} onSelect={selectField("gender")} disabled={submitting} />
-            </div>
+<div style={{ marginBottom: "1.1rem" }}>
+  <label style={labelStyle}>Gender<Req /></label>
+  <ChoiceRow options={GENDER_OPTIONS} value={form.gender} onSelect={selectField("gender")} disabled={submitting} />
+  {showErrors && !form.gender && <FieldError />}
+</div>
 
             {/* NEW: Emergency contact */}
             {[
@@ -612,30 +627,32 @@ function RegistrationModal({ eventId, eventTitle, eventPrice, onClose }) {
             ].map(renderInput)}
 
             {/* NEW: Pre-existing conditions */}
-            <div style={{ marginBottom: "1.1rem" }}>
-              <label style={labelStyle}>Pre-existing Medical Conditions</label>
-              <textarea
-                name="pre_existing_conditions"
-                value={form.pre_existing_conditions}
-                onChange={handleChange}
-                placeholder="e.g. Asthma, uses an inhaler"
-                rows={3}
-                disabled={submitting}
-                style={{ ...inputBase, resize: "vertical", minHeight: 76, lineHeight: 1.5 }}
-                {...focusProps}
-              />
-              <p style={hintStyle}>Type "None" if you have no conditions we should know about.</p>
-            </div>
+<div style={{ marginBottom: "1.1rem" }}>
+  <label style={labelStyle}>Pre-existing Medical Conditions<Req /></label>
+  <textarea
+    name="pre_existing_conditions"
+    value={form.pre_existing_conditions}
+    onChange={handleChange}
+    placeholder="e.g. Asthma, uses an inhaler"
+    rows={3}
+    disabled={submitting}
+    style={{ ...inputBase, resize: "vertical", minHeight: 76, lineHeight: 1.5 }}
+    {...focusProps}
+  />
+  <p style={hintStyle}>Type "None" if you have no conditions we should know about.</p>
+  {showErrors && !form.pre_existing_conditions.trim() && <FieldError />}
+</div>
 
             {/* Your Race (single choice) */}
-            <div style={{ marginBottom: "1.1rem" }}>
-              <label style={labelStyle}>Your Race</label>
-              <ChoiceRow options={RACE_OPTIONS} value={form.race_distance} onSelect={selectField("race_distance")} disabled={submitting} minWidth={115} />
-            </div>
+<div style={{ marginBottom: "1.1rem" }}>
+  <label style={labelStyle}>Your Race<Req /></label>
+  <ChoiceRow options={RACE_OPTIONS} value={form.race_distance} onSelect={selectField("race_distance")} disabled={submitting} minWidth={115} />
+  {showErrors && !form.race_distance && <FieldError />}
+</div>
 
             {/* NEW: Estimated finish time */}
             <div style={{ marginBottom: "1.1rem" }}>
-              <label style={labelStyle}>Estimated Finish Time</label>
+                <label style={labelStyle}>Estimated Finish Time<Req /></label>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                 {[
                   { key: "est_h", ph: "HH", max: 23, aria: "Hours" },
@@ -659,35 +676,39 @@ function RegistrationModal({ eventId, eventTitle, eventPrice, onClose }) {
                 ))}
               </div>
               <p style={hintStyle}>Hours : minutes : seconds. Example: 02:15:00</p>
+                {showErrors && !hasEstimatedTime && <FieldError />}
             </div>
 
             {/* NEW: Medal */}
-            <div style={{ marginBottom: "1.1rem" }}>
-              <label style={labelStyle}>Medal</label>
-              <ChoiceRow options={medalOptions} value={form.medal} onSelect={selectField("medal")} disabled={submitting} minWidth={170} />
-            </div>
+<div style={{ marginBottom: "1.1rem" }}>
+  <label style={labelStyle}>Medal<Req /></label>
+  <ChoiceRow options={medalOptions} value={form.medal} onSelect={selectField("medal")} disabled={submitting} minWidth={170} />
+  {showErrors && !form.medal && <FieldError />}
+</div>
 
             {/* NEW: T-shirt size */}
-            <div style={{ marginBottom: "1.1rem" }}>
-              <label style={labelStyle}>T-Shirt Size</label>
-              <ChoiceRow options={TSHIRT_SIZES} value={form.t_shirt_size} onSelect={selectField("t_shirt_size")} disabled={submitting} minWidth={70} />
-            </div>
+<div style={{ marginBottom: "1.1rem" }}>
+  <label style={labelStyle}>T-Shirt Size<Req /></label>
+  <ChoiceRow options={TSHIRT_SIZES} value={form.t_shirt_size} onSelect={selectField("t_shirt_size")} disabled={submitting} minWidth={70} />
+  {showErrors && !form.t_shirt_size && <FieldError />}
+</div>
 
             {/* Recovery Games (yes/no) */}
-            <div style={{ marginBottom: "1.1rem" }}>
-              <label style={labelStyle}>Will you participate in Recovery Games?</label>
-              <ChoiceRow
-                options={[{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]}
-                value={form.recovery_games}
-                onSelect={selectField("recovery_games")}
-                disabled={submitting}
-                minWidth={80}
-              />
-            </div>
+<div style={{ marginBottom: "1.1rem" }}>
+  <label style={labelStyle}>Will you participate in Recovery Games?<Req /></label>
+  <ChoiceRow
+    options={[{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]}
+    value={form.recovery_games}
+    onSelect={selectField("recovery_games")}
+    disabled={submitting}
+    minWidth={80}
+  />
+  {showErrors && !form.recovery_games && <FieldError />}
+</div>
 
             {/* How did you learn about us */}
             <div style={{ marginBottom: "1.1rem" }}>
-              <label style={labelStyle}>How Did You Learn About Us?</label>
+                <label style={labelStyle}>How Did You Learn About Us?<Req /></label>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
                 {HOW_HEARD_OPTIONS.map(opt => {
                   const checked = form.how_heard === opt;
@@ -712,6 +733,7 @@ function RegistrationModal({ eventId, eventTitle, eventPrice, onClose }) {
                   );
                 })}
               </div>
+              {showErrors && !form.how_heard && <FieldError />}
             </div>
 
             {/* Terms, Waiver & Privacy — collapsed by default */}
@@ -726,6 +748,9 @@ function RegistrationModal({ eventId, eventTitle, eventPrice, onClose }) {
                 </span>
                 <span style={{ color: "#C9A84C", display: "inline-block", transform: termsOpen ? "rotate(180deg)" : "none", transition: "transform 0.25s" }}>▾</span>
               </button>
+              {showErrors && !form.agree_terms && (
+  <div style={{ marginTop: "-0.75rem", marginBottom: "1rem" }}><FieldError /></div>
+)}
 
               {termsOpen && (
                 <div style={{ padding: "1rem", maxHeight: 220, overflowY: "auto", borderTop: "1px solid rgba(255,255,255,0.06)", fontFamily: "'DM Sans', sans-serif", fontSize: "0.72rem", lineHeight: 1.65, color: "rgba(255,255,255,0.45)" }}>
@@ -757,6 +782,9 @@ function RegistrationModal({ eventId, eventTitle, eventPrice, onClose }) {
                 I have read and agree to the Terms &amp; Conditions, Waiver of Liability, and Data Privacy Consent above.
               </span>
             </button>
+            {showErrors && !form.agree_terms && (
+  <div style={{ marginTop: "-0.75rem", marginBottom: "1rem" }}><FieldError /></div>
+)}
 
                         {/* Amount to pay (follows the medal choice and ticket count) */}
             {form.medal && totalAmount && (
@@ -843,6 +871,12 @@ function RegistrationModal({ eventId, eventTitle, eventPrice, onClose }) {
               )}
             </div>
 
+            {showErrors && !isValid && (
+  <div style={{ marginBottom: "1.1rem", padding: "0.75rem 1rem", borderRadius: 8, background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.25)", color: "#fca5a5", fontFamily: "'DM Sans', sans-serif", fontSize: "0.8rem", lineHeight: 1.6 }}>
+    Please complete: {missingFields.join(", ")}.
+  </div>
+)}
+
             {status === "error" && errorMsg && (
               <div style={{ marginBottom: "1.1rem", padding: "0.75rem 1rem", borderRadius: 8, background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.25)", color: "#fca5a5", fontFamily: "'DM Sans', sans-serif", fontSize: "0.8rem" }}>
                 {errorMsg}
@@ -850,13 +884,13 @@ function RegistrationModal({ eventId, eventTitle, eventPrice, onClose }) {
             )}
 
             <button
-              type="submit"
-              disabled={submitting || !isValid}
-              className="btn-primary"
-              style={{ width: "100%", padding: "1rem", background: "linear-gradient(135deg,#C9A84C,#b8962e)", color: "#0d0d1a", border: "none", borderRadius: 8, fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "0.88rem", cursor: (submitting || !isValid) ? "not-allowed" : "pointer", opacity: (submitting || !isValid) ? 0.55 : 1, boxShadow: "0 4px 24px rgba(201,168,76,0.35)", transition: "all 0.3s", letterSpacing: "0.08em", textTransform: "uppercase" }}
-            >
-              {submitting ? "Submitting..." : "Submit"}
-            </button>
+  type="submit"
+  disabled={submitting}
+  className="btn-primary"
+  style={{ width: "100%", padding: "1rem", background: "linear-gradient(135deg,#C9A84C,#b8962e)", color: "#0d0d1a", border: "none", borderRadius: 8, fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "0.88rem", cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.55 : 1, boxShadow: "0 4px 24px rgba(201,168,76,0.35)", transition: "all 0.3s", letterSpacing: "0.08em", textTransform: "uppercase" }}
+>
+  {submitting ? "Submitting..." : "Submit"}
+</button>
 
             <p style={{ marginTop: "1rem", textAlign: "center", fontFamily: "'DM Sans', sans-serif", color: "rgba(255,255,255,0.25)", fontSize: "0.72rem", letterSpacing: "0.04em" }}>ESC OR CLICK OUTSIDE TO CANCEL</p>
           </form>
