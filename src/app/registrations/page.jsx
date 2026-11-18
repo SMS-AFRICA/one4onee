@@ -131,7 +131,9 @@ function fmtDate(iso) {
     return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 const fmtKES = (n) => `KES ${Number(n || 0).toLocaleString()}`;
-const fmtRace = (r) => (r === undefined || r === null || r === "" ? "—" : `${r} km`);
+const fmtRace = (r) => (r === undefined || r === null || r === "" ? "—" : String(r));
+const fmtText = (v) => (v === undefined || v === null || String(v).trim() === "" ? "—" : String(v));
+const fmtMedal = (m) => (m === "with_medal" ? "With medal" : m === "without_medal" ? "Without medal" : fmtText(m));
 const fmtHeard = (h) => (Array.isArray(h) ? h.join(", ") : h || "—");
 const fmtYesNo = (v) => (v ? String(v).charAt(0).toUpperCase() + String(v).slice(1) : "—");
 
@@ -388,10 +390,14 @@ function DetailModal({ row, token, onClose, onUnauthorized }) {
         return () => { cancelled = true; };
     }, [row.id, token]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const fields = [
+        const fields = [
         ["Full Name", data.full_name], ["Email", data.email || "—"], ["Phone", data.phone_number || "—"],
+        ["Gender", fmtText(data.gender)], ["Emergency Contact Name", fmtText(data.emergency_contact_name)], ["Emergency Contact Number", fmtText(data.emergency_contact_number)],
+        ["Pre-existing Medical Conditions", fmtText(data.pre_existing_conditions)],
+        ["Race", fmtRace(data.race)], ["Estimated Finish Time", fmtText(data.estimated_time)], ["Medal", fmtMedal(data.medal)],
+        ["T-Shirt Size", fmtText(data.t_shirt_size)], ["Kit Collection Point", fmtText(data.kit_collection_point)],
+        ["Recovery Games", fmtYesNo(data.recovery_games)], ["Luggage Drop Off", fmtYesNo(data.luggage_dropoff)], ["Heard About Us", fmtHeard(data.how_did_you_hear)],
         ["Ticket No.", data.ticket_no || "—"], ["Tickets Bought", data.tickets_bought ?? "—"], ["Amount", fmtKES(data.amount)],
-        ["Race", fmtRace(data.race)], ["Recovery Games", fmtYesNo(data.recovery_games)], ["Heard About Us", fmtHeard(data.how_did_you_hear)],
         ["M-Pesa Receipt", data.mpesa_receipt || "—"], ["Checkout Request ID", data.checkout_request_id || "—"], ["Registration ID", data.id],
         ["Registered At", fmtDateTime(data.created_at)], ["Paid At", fmtDateTime(data.paid_at)], ["Last Updated", fmtDateTime(data.updated_at)],
     ];
@@ -628,14 +634,24 @@ export default function RegistrationsPage() {
             if (!all.length) { showToast("No registrations match the current filters.", "error"); return; }
 
             const XLSX = await import("xlsx");
+                        const t = (v) => (fmtText(v) === "—" ? "" : fmtText(v)); // empty value -> blank cell
             const sheetRows = all.map((r, i) => ({
                 "#": i + 1,
                 "Full Name": r.full_name || "",
                 "Email": r.email || "",
                 "Phone": r.phone_number || "",
+                "Gender": t(r.gender),
+                "Emergency Contact Name": t(r.emergency_contact_name),
+                "Emergency Contact Number": t(r.emergency_contact_number),
+                "Pre-existing Medical Conditions": t(r.pre_existing_conditions),
+                "Race": r.race ?? "",
+                "Estimated Finish Time": t(r.estimated_time),
+                "Medal": r.medal ? fmtMedal(r.medal) : "",
+                "T-Shirt Size": t(r.t_shirt_size),
+                "Kit Collection Point": t(r.kit_collection_point),
                 "Tickets": r.tickets_bought ?? "",
-                "Race (km)": r.race ?? "",
-                "Recovery Games": fmtYesNo(r.recovery_games) === "—" ? "" : fmtYesNo(r.recovery_games),
+                "Recovery Games": r.recovery_games ? fmtYesNo(r.recovery_games) : "",
+                "Luggage Drop Off": r.luggage_dropoff ? fmtYesNo(r.luggage_dropoff) : "",
                 "How They Heard": fmtHeard(r.how_did_you_hear) === "—" ? "" : fmtHeard(r.how_did_you_hear),
                 "Amount (KES)": Number(r.amount || 0),
                 "Status": r.status || "",
@@ -646,7 +662,7 @@ export default function RegistrationsPage() {
             }));
 
             const wsData = XLSX.utils.json_to_sheet(sheetRows);
-            wsData["!cols"] = [6, 24, 28, 16, 8, 10, 15, 22, 13, 11, 16, 16, 22, 22].map((w) => ({ wch: w }));
+                        wsData["!cols"] = [6, 24, 28, 16, 10, 24, 20, 36, 16, 14, 16, 12, 38, 8, 15, 15, 22, 13, 11, 16, 16, 22, 22].map((w) => ({ wch: w }));
 
             const filterText = [
                 filters.q && `Search: "${filters.q}"`,
@@ -821,15 +837,24 @@ export default function RegistrationsPage() {
                     {/* Table */}
                     <div style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.07)", background: "#111122", overflow: "hidden" }}>
                         <div style={{ overflowX: "auto" }}>
-                            <table style={{ width: "100%", minWidth: 1080, borderCollapse: "collapse" }}>
+                            <table style={{ width: "100%", minWidth: 2600, borderCollapse: "collapse" }}>
                                 <thead>
-                                    <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)" }}>
+                                                                        <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)" }}>
                                         <th style={thStyle}>#</th>
                                         <SortHead col="full_name" label="Runner" />
                                         <th style={thStyle}>Phone</th>
+                                        <th style={thStyle}>Gender</th>
+                                        <th style={thStyle}>Emergency Contact</th>
+                                        <th style={thStyle}>Medical Conditions</th>
                                         <th style={thStyle}>Race</th>
+                                        <th style={thStyle}>Est. Time</th>
+                                        <th style={thStyle}>Medal</th>
+                                        <th style={thStyle}>T-Shirt</th>
+                                        <th style={thStyle}>Kit Collection Point</th>
                                         <th style={thStyle}>Tickets</th>
                                         <th style={thStyle}>Recovery</th>
+                                        <th style={thStyle}>Luggage Drop Off</th>
+                                        <th style={thStyle}>Heard About Us</th>
                                         <SortHead col="amount" label="Amount" align="right" />
                                         <th style={thStyle}>Status</th>
                                         <th style={thStyle}>Ticket No.</th>
@@ -839,19 +864,31 @@ export default function RegistrationsPage() {
                                 </thead>
                                 <tbody>
                                     {loading && rows.length === 0 && Array.from({ length: 6 }).map((_, i) => (
-                                        <tr key={i}><td colSpan={11} style={{ padding: "0.7rem 1rem" }}><div className="skeleton" style={{ height: 26 }} /></td></tr>
+                                        <tr key={i}><td colSpan={20} style={{ padding: "0.7rem 1rem" }}><div className="skeleton" style={{ height: 26 }} /></td></tr>
                                     ))}
                                     {rows.map((r, i) => (
                                         <tr key={r.id} className="reg-row" onClick={() => setSelected(r)} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", opacity: loading ? 0.5 : 1, transition: "opacity 0.2s" }}>
-                                            <td style={{ ...tdStyle, color: "rgba(255,255,255,0.3)", fontFamily: SERIF, fontWeight: 700, fontSize: "1rem" }}>{(pagination.page - 1) * pagination.limit + i + 1}</td>
+                                                                                        <td style={{ ...tdStyle, color: "rgba(255,255,255,0.3)", fontFamily: SERIF, fontWeight: 700, fontSize: "1rem" }}>{(pagination.page - 1) * pagination.limit + i + 1}</td>
                                             <td style={tdStyle}>
                                                 <div style={{ fontFamily: SYNE, fontWeight: 700, fontSize: "0.86rem", color: "#fff" }}>{r.full_name}</div>
                                                 <div style={{ fontSize: "0.74rem", color: "rgba(255,255,255,0.35)", marginTop: 2 }}>{r.email || "—"}</div>
                                             </td>
                                             <td style={tdStyle}>{r.phone_number || "—"}</td>
-                                            <td style={tdStyle}>{fmtRace(r.race)}</td>
+                                            <td style={tdStyle}>{fmtText(r.gender)}</td>
+                                            <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>
+                                                <div>{fmtText(r.emergency_contact_name)}</div>
+                                                <div style={{ fontSize: "0.74rem", color: "rgba(255,255,255,0.35)", marginTop: 2 }}>{fmtText(r.emergency_contact_number)}</div>
+                                            </td>
+                                            <td style={{ ...tdStyle, minWidth: 220, maxWidth: 280, whiteSpace: "normal", lineHeight: 1.5 }}>{fmtText(r.pre_existing_conditions)}</td>
+                                            <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>{fmtRace(r.race)}</td>
+                                            <td style={tdStyle}>{fmtText(r.estimated_time)}</td>
+                                            <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>{fmtMedal(r.medal)}</td>
+                                            <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>{fmtText(r.t_shirt_size)}</td>
+                                            <td style={{ ...tdStyle, minWidth: 220, whiteSpace: "normal" }}>{fmtText(r.kit_collection_point)}</td>
                                             <td style={tdStyle}>{r.tickets_bought ?? "—"}</td>
                                             <td style={tdStyle}>{fmtYesNo(r.recovery_games)}</td>
+                                            <td style={tdStyle}>{fmtYesNo(r.luggage_dropoff)}</td>
+                                            <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>{fmtHeard(r.how_did_you_hear)}</td>
                                             <td style={{ ...tdStyle, textAlign: "right", color: "#C9A84C", fontWeight: 600, whiteSpace: "nowrap" }}>{fmtKES(r.amount)}</td>
                                             <td style={tdStyle}><StatusBadge status={r.status} /></td>
                                             <td style={{ ...tdStyle, fontSize: "0.78rem", color: "rgba(255,255,255,0.55)", whiteSpace: "nowrap" }}>{r.ticket_no || "—"}</td>

@@ -353,6 +353,17 @@ const HOW_HEARD_OPTIONS = [
   "Whatsapp groups",
   "Running Coach",
 ];
+const KIT_POINT_OPTIONS = [
+  "Run Beyond - Warwick Centre Gigiri",
+  "Runners Point - Waterfront Karen",
+  "Baqed Shop - Diamond Plaza, 4th Floor CBD",
+  "Trafford Sports - Westlands Market",
+  "Chebet Jikoni - Gitaru",
+];
+const LUGGAGE_OPTIONS = [
+  { value: "yes", label: "Yes" },
+  { value: "no", label: "No" },
+];
 
 // Row of single-choice buttons (used for race, gender, medal, t-shirt, recovery games)
 // options can be plain strings, or { value, label } when the sent value differs from the text shown
@@ -386,6 +397,37 @@ function ChoiceRow({ options, value, onSelect, disabled, minWidth = 100 }) {
   );
 }
 
+function CheckboxChoice({ options, value, onSelect, disabled, columns = 1 }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: "0.5rem" }}>
+      {options.map(o => {
+        const val = typeof o === "string" ? o : o.value;
+        const label = typeof o === "string" ? o : o.label;
+        const checked = value === val;
+        return (
+          <button
+            key={val}
+            type="button"
+            onClick={() => onSelect(val)}
+            disabled={disabled}
+            style={{
+              display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.7rem 0.8rem", borderRadius: 8,
+              border: `1.5px solid ${checked ? "#C9A84C" : "rgba(255,255,255,0.1)"}`,
+              background: checked ? "rgba(201,168,76,0.1)" : "rgba(255,255,255,0.03)",
+              cursor: disabled ? "not-allowed" : "pointer", transition: "all 0.2s", textAlign: "left",
+            }}
+          >
+            <span style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, border: `1.5px solid ${checked ? "#C9A84C" : "rgba(255,255,255,0.25)"}`, background: checked ? "#C9A84C" : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {checked && <span style={{ color: "#0d0d1a", fontSize: "0.62rem", fontWeight: 900, lineHeight: 1 }}>✓</span>}
+            </span>
+            <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.78rem", color: checked ? "#e8c96a" : "rgba(255,255,255,0.7)" }}>{label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 const Req = () => <span style={{ color: "#f87171", marginLeft: 4 }}>*</span>;
 
 const FieldError = () => (
@@ -410,7 +452,9 @@ function RegistrationModal({ eventId, eventTitle, eventPrice, onClose }) {
     est_s: "",
     medal: "",
     t_shirt_size: "",
+    kit_collection_point: "",
     recovery_games: "",
+    luggage_dropoff: "",
     how_heard: "",
     agree_terms: false,
   });
@@ -495,7 +539,9 @@ function RegistrationModal({ eventId, eventTitle, eventPrice, onClose }) {
   !hasEstimatedTime && "Estimated Finish Time",
   !form.medal && "Medal",
   !form.t_shirt_size && "T-Shirt Size",
+  !form.kit_collection_point && "Kit Collection Point",
   !form.recovery_games && "Recovery Games",
+  !form.luggage_dropoff && "Luggage Drop Off",
   !form.how_heard && "How Did You Learn About Us?",
   !form.agree_terms && "Terms agreement",
 ].filter(Boolean);
@@ -526,6 +572,8 @@ const isValid = missingFields.length === 0;
           medal: form.medal, // "with_medal" | "without_medal"
           t_shirt_size: form.t_shirt_size,
           recovery_games: form.recovery_games,
+          kit_collection_point: form.kit_collection_point,   // ← NEW
+          luggage_dropoff: form.luggage_dropoff,
           how_did_you_hear: form.how_heard,
           tickets_bought: Number(form.tickets_bought) || 1,
         }),
@@ -693,6 +741,13 @@ const isValid = missingFields.length === 0;
   {showErrors && !form.t_shirt_size && <FieldError />}
 </div>
 
+            {/* NEW: Kit collection point */}
+            <div style={{ marginBottom: "1.1rem" }}>
+              <label style={labelStyle}>Kit Collection Point<Req /></label>
+              <CheckboxChoice options={KIT_POINT_OPTIONS} value={form.kit_collection_point} onSelect={selectField("kit_collection_point")} disabled={submitting} />
+              {showErrors && !form.kit_collection_point && <FieldError />}
+            </div>
+
             {/* Recovery Games (yes/no) */}
 <div style={{ marginBottom: "1.1rem" }}>
   <label style={labelStyle}>Will you participate in Recovery Games?<Req /></label>
@@ -705,6 +760,16 @@ const isValid = missingFields.length === 0;
   />
   {showErrors && !form.recovery_games && <FieldError />}
 </div>
+
+            {/* NEW: Luggage drop off */}
+            <div style={{ marginBottom: "1.1rem" }}>
+              <label style={labelStyle}>Luggage Drop Off<Req /></label>
+              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.8rem", lineHeight: 1.65, color: "rgba(255,255,255,0.65)", marginBottom: "0.7rem" }}>
+                We have secure lockable lockers available at KES 800 for a backpack size bag. Please confirm if you are interested in this package. <strong style={{ color: "#fff" }}>Payment is not needed now.</strong>
+              </p>
+              <CheckboxChoice options={LUGGAGE_OPTIONS} value={form.luggage_dropoff} onSelect={selectField("luggage_dropoff")} disabled={submitting} columns={2} />
+              {showErrors && !form.luggage_dropoff && <FieldError />}
+            </div>
 
             {/* How did you learn about us */}
             <div style={{ marginBottom: "1.1rem" }}>
@@ -782,9 +847,7 @@ const isValid = missingFields.length === 0;
                 I have read and agree to the Terms &amp; Conditions, Waiver of Liability, and Data Privacy Consent above.
               </span>
             </button>
-            {showErrors && !form.agree_terms && (
-  <div style={{ marginTop: "-0.75rem", marginBottom: "1rem" }}><FieldError /></div>
-)}
+            
 
                         {/* Amount to pay (follows the medal choice and ticket count) */}
             {form.medal && totalAmount && (
