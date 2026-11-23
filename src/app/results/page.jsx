@@ -132,14 +132,25 @@ const api = {
     return json.data;
   },
 
-  async login(username, email, password) {
-    const res = await fetch(`${BASE_URL}/api/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, email, password }),
-    });
-    if (!res.ok) throw new Error(`Login failed: ${res.status}`);
-    const json = await res.json();
+    async login(username, email, password) {
+    let res;
+    try {
+      res = await fetch(`${BASE_URL}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, email, password }),
+      });
+    } catch {
+      throw new Error("Can't reach the server. Please check your internet connection and try again.");
+    }
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const serverMsg = json.message || json.error;
+      if (res.status === 401) throw new Error(serverMsg || "Incorrect username, email or password. Please check your details and try again.");
+      if (res.status === 429) throw new Error("Too many login attempts. Please wait a moment and try again.");
+      if (res.status >= 500) throw new Error("Something went wrong on our side. Please try again shortly.");
+      throw new Error(serverMsg || `Login failed (${res.status})`);
+    }
     if (json.code !== 200) throw new Error(json.message || "Login failed");
     return { token: json.token, user: { username: json.username, email, role: "admin" } };
   },
